@@ -1,0 +1,73 @@
+# Plan 60d: Final benchmark, severe skew with 20% poisoning, wide view (gossip_k 9, num_tips 9), 9 aggregators, 5 seeds.
+# Used in the paper: Table main (wide view), Suppl. Table S1 (merge cost). Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/60d_q1_final_wide_view.yaml --jobs 2
+
+name: q1_final_wide_view
+output_root: results/q1_final_wide_view
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: 3w_non_iid_severe_with_poisoning_wide
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 9}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: robust
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_robust}
+          selection: {num_tips: 9}
+  - tag: prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+          selection: {num_tips: 9}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection: {num_tips: 9}
+  - tag: multi_krum
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: multi_krum}
+          selection: {num_tips: 9}
+  - tag: bulyan
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: bulyan}
+          selection: {num_tips: 9}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: rfa}
+          selection: {num_tips: 9}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+          selection: {num_tips: 9}
+  - tag: wfagg
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: wfagg}
+          selection: {num_tips: 9}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+          selection: {num_tips: 9}

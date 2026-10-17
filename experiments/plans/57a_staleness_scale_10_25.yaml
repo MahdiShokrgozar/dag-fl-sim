@@ -1,0 +1,52 @@
+# Plan 57a: Age factor in aggregation on/off at 10 and 25 nodes, severe skew with 20% poisoning, 5 seeds.
+# Used in the paper: Sec. age factor, Sec. network size. Platform of the reported runs: Kaggle.
+# Run: python run_experiments.py --plan experiments/plans/57a_staleness_scale_10_25.yaml --jobs 2
+
+name: staleness_scale_10_25
+output_root: results/staleness_scale_10_25
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: n10_severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox_decay
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: global_prox_nodecay
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection: {staleness: {lambda_aggregate: 0.0}}
+- name: n25_severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 25, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 25
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox_decay
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: global_prox_nodecay
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection: {staleness: {lambda_aggregate: 0.0}}

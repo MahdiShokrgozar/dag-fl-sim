@@ -1,0 +1,95 @@
+# Plan 70: FARABI with its exponential kernel replaced by a hard radius (2, 4, 50) around the node's own model, severe skew with and without 20% poisoning and two small-noise attacks, 5 seeds; the kernel arms reproduce 60c, 60b and 62 exactly.
+# Used in the paper: Sec. inside the merge (kernel vs hard radius), Suppl. Table S6. Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/70_kernel_ablation.yaml --jobs 2
+
+name: kernel_ablation
+output_root: results/kernel_ablation
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - &id001
+    tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - &id002
+    tag: hard_r2
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, distance_kernel: hard, hard_radius: 2.0}
+  - &id003
+    tag: hard_r4
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, distance_kernel: hard, hard_radius: 4.0}
+  - &id004
+    tag: hard_r50
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, distance_kernel: hard, hard_radius: 50.0}
+  - &id005
+    tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+- name: severe_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - *id001
+  - *id002
+  - *id003
+  - *id004
+  - *id005
+- name: sigma_0p01
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+      attacks:
+        poisoning: {noise_std: 0.01, evaluate_true_accuracy: true}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations: &id006
+  - *id001
+  - *id002
+  - *id003
+  - *id004
+- name: sigma_0p003
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+      attacks:
+        poisoning: {noise_std: 0.003, evaluate_true_accuracy: true}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations: *id006

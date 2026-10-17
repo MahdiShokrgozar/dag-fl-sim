@@ -1,0 +1,59 @@
+# Plan 56: Weight-space pre-filter ablation: FARABI (both anchors), BALANCE and RFA with and without the filter, 5 seeds.
+# Used in the paper: Table pre-filter, Suppl. Fig. S2. Platform of the reported runs: Kaggle.
+# Run: python run_experiments.py --plan experiments/plans/56_prefilter_ablation.yaml --jobs 2
+
+name: prefilter_ablation
+output_root: results/prefilter_ablation
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: 3_non_iid_severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: global_prox_nofilter
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, prefilter: false}
+  - tag: prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+  - tag: prox_nofilter
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox, prefilter: false}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+  - tag: balance_filter
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance, prefilter: true}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: rfa}
+  - tag: rfa_filter
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: rfa, prefilter: true}

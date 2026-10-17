@@ -1,0 +1,49 @@
+# Plan 45a: Age decay in tip selection and aggregation, lambda choice, 12-node workload of the companion paper, 3 seeds.
+# Used in the paper: Sec. age factor (tip-selection age factor on the companion paper's workload). Platform of the reported runs: Kaggle.
+# Run: python run_experiments.py --plan experiments/plans/45a_staleness_decay_p13.yaml --jobs 2
+
+name: "staleness_decay_p13"
+output_root: "results/staleness_decay_p13"
+seeds: [42, 43, 44]
+
+x-farabi: &farabi_base
+  aggregation: { strategy: "farabi_prox" }
+  consensus:
+    strategy: "farabi_ufs"
+    anomaly_mode: "gates"
+    anomaly_gates: { cold_start_sanity_ceiling: true }
+  selection: { mode: "unified" }
+  reputation: { reward_scale: 0.15, max_strikes: 1 }
+
+experiments:
+  - name: "honest"
+    base_config: &base
+      simulation: { backend: "l2_scaling", protocol: "farabi", max_time: 400.0 }
+      network: { num_nodes: 12, gossip_k: 6 }
+      dataset: { iid: false, scheme: "dirichlet", dirichlet_alpha: 0.1 }
+      local_training: { max_batches: 20 }
+      participants:
+        total: 12
+        distribution: { honest: 1.0 }
+      reporting: { interval: 30.0, active_metric_preset: "paper_final" }
+      protocols: { farabi: *farabi_base }
+    variations: &opts
+      - tag: "decay_l05"
+        overrides: { protocols: { farabi: { selection: { staleness: { enabled: true, lambda_select: 0.5, lambda_aggregate: 0.5 } } } } }
+      - tag: "decay_l1"
+        overrides: { protocols: { farabi: { selection: { staleness: { enabled: true, lambda_select: 1.0, lambda_aggregate: 1.0 } } } } }
+      - tag: "decay_sel_only"
+        overrides: { protocols: { farabi: { selection: { staleness: { enabled: true, lambda_select: 0.5, lambda_aggregate: 0.0 } } } } }
+      - tag: "cap1p5"
+        overrides: { protocols: { farabi: { selection: { staleness: { enabled: true, lambda_select: 0.0, lambda_aggregate: 0.0, max_age_rounds: 1.5 } } } } }
+      - tag: "decay_l05_cap1p5"
+        overrides: { protocols: { farabi: { selection: { staleness: { enabled: true, lambda_select: 0.5, lambda_aggregate: 0.5, max_age_rounds: 1.5 } } } } }
+
+  - name: "attacked"
+    base_config:
+      <<: *base
+      participants:
+        total: 12
+        distribution: { honest: 0.6, lazy: 0.2, poisoning: 0.2 }
+        attacks: { spoof_profile: "dirichlet" }
+    variations: *opts

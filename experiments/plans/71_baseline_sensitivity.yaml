@@ -1,0 +1,95 @@
+# Plan 71: Hyperparameter sensitivity of BALANCE (gamma, alpha) and LIGHTYEAR (tau), severe skew with and without 20% poisoning, 5 seeds; the published settings reproduce 60c and 60b exactly.
+# Used in the paper: Discussion (calibration of the baselines), Suppl. Table S5. Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/71_baseline_sensitivity.yaml --jobs 2
+
+name: baseline_sensitivity
+output_root: results/baseline_sensitivity
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+  - tag: balance_g0p1
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance, balance_gamma: 0.1}
+  - tag: balance_g1p0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance, balance_gamma: 1.0}
+  - tag: balance_a0p1
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance, balance_alpha: 0.1}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+  - tag: lightyear_t0p5
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear, lightyear_tau: 0.5}
+  - tag: lightyear_t0p6
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear, lightyear_tau: 0.6}
+  - tag: lightyear_t0p9
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear, lightyear_tau: 0.9}
+- name: severe_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+  - tag: balance_g0p1
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance, balance_gamma: 0.1}
+  - tag: balance_g1p0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance, balance_gamma: 1.0}
+  - tag: balance_a0p1
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance, balance_alpha: 0.1}

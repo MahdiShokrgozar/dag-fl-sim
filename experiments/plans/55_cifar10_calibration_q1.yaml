@@ -1,0 +1,62 @@
+# Plan 55: CIFAR-10 calibration with a centralized FedAvg reference, one seed.
+# Used in the paper: Sec. CIFAR-10 (one-seed calibration). Platform of the reported runs: Kaggle.
+# Run: python run_experiments.py --plan experiments/plans/55_cifar10_calibration_q1.yaml --jobs 2
+
+name: cifar10_calibration_q1
+output_root: results/cifar10_calibration_q1
+seeds: [42]
+experiments:
+- name: A_cifar_moderate_honest
+  base_config: &cifar
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {name: cifar10, download: true, iid: false, scheme: dirichlet, dirichlet_alpha: 0.5}
+    model: {name: cnn_cifar10_gn, num_classes: 10}
+    local_training: {epochs: 2, optimizer: sgd, momentum: 0.9, lr: 0.01, clip_grad_norm: 2.0, max_batches: 160}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols: {farabi: {aggregation: {strategy: farabi_global_prox}}}
+  - tag: centralized_fedavg
+    overrides:
+      simulation: {backend: centralized, protocol: generic_protocol, centralized_round_interval: 10.0}
+      aggregation: {strategy: fedavg}
+- name: B_cifar_severe_honest
+  base_config:
+    <<: *cifar
+    dataset: {name: cifar10, download: true, iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols: {farabi: {aggregation: {strategy: farabi_global_prox}}}
+  - tag: prox
+    overrides:
+      protocols: {farabi: {aggregation: {strategy: farabi_prox}}}
+  - tag: robust
+    overrides:
+      protocols: {farabi: {aggregation: {strategy: farabi_robust}}}
+  - tag: centralized_fedavg
+    overrides:
+      simulation: {backend: centralized, protocol: generic_protocol, centralized_round_interval: 10.0}
+      aggregation: {strategy: fedavg}
+- name: C_cifar_severe_with_poisoning
+  base_config:
+    <<: *cifar
+    dataset: {name: cifar10, download: true, iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols: {farabi: {aggregation: {strategy: farabi_global_prox}}}
+  - tag: prox
+    overrides:
+      protocols: {farabi: {aggregation: {strategy: farabi_prox}}}
+  - tag: robust
+    overrides:
+      protocols: {farabi: {aggregation: {strategy: farabi_robust}}}

@@ -1,0 +1,105 @@
+# Plan 68: ClippedGossip in the four scenarios of Table main and under ALIE z=1, with a FARABI reference arm (byte-identical to 60a-d and 64).
+# Used in the paper: Table main (ClippedGossip row), Sec. attacks closer to the honest band. Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/68_clippedgossip.yaml --jobs 2
+
+name: clippedgossip
+output_root: results/clippedgossip
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: 1_non_iid_moderate_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.5}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: clippedgossip
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: clippedgossip}}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+- name: 2_non_iid_severe_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: clippedgossip
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: clippedgossip}}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+- name: 3_non_iid_severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: clippedgossip
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: clippedgossip}}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+- name: 3w_non_iid_severe_with_poisoning_wide
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 9}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: clippedgossip
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: clippedgossip}, selection: {num_tips: 9}}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}, selection: {num_tips: 9}}
+- name: alie_z1
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+      attacks:
+        poisoning: {mode: alie, alie_z: 1.0, evaluate_true_accuracy: true}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: clippedgossip
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: clippedgossip}}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}

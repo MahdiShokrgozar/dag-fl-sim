@@ -1,0 +1,40 @@
+# Plan 60abr: Re-run of LIGHTYEAR cells of 60a/60b that were downloaded before they finished (plus one reproducibility control).
+# Used in the paper: Table main (fills LIGHTYEAR cells). Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/60abr_q1_final_lightyear_rerun.yaml --jobs 2
+
+name: q1_final_lightyear_rerun
+output_root: results/q1_final_lightyear_rerun
+seeds: [13, 99]
+experiments:
+- name: 1_non_iid_moderate_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.5}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+- name: 2_non_iid_severe_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}

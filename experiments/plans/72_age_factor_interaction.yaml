@@ -1,0 +1,58 @@
+# Plan 72: Age factor in aggregation x age factor in tip selection (2x2), FARABI, severe skew with and without 20% poisoning, 5 seeds.
+# Used in the paper: Sec. age factor. Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/72_age_factor_interaction.yaml --jobs 2
+
+name: age_factor_interaction
+output_root: results/age_factor_interaction
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations: &id001
+  - tag: l1_s1
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection:
+            staleness: {enabled: true, lambda_select: 1.0, lambda_aggregate: 1.0}
+  - tag: l0_s1
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection:
+            staleness: {enabled: true, lambda_select: 1.0, lambda_aggregate: 0.0}
+  - tag: l1_s0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection:
+            staleness: {enabled: true, lambda_select: 0.0, lambda_aggregate: 1.0}
+  - tag: l0_s0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection:
+            staleness: {enabled: true, lambda_select: 0.0, lambda_aggregate: 0.0}
+- name: severe_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations: *id001

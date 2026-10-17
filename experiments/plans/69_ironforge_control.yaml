@@ -1,0 +1,116 @@
+# Plan 69: IronForge and FARABI, each with IronForge's training settings and with ours, in the four scenarios of Table main, 5 seeds; the FARABI/our-training arm reproduces 60a-d exactly.
+# Used in the paper: Sec. protocol-level comparison with IronForge; Suppl. Tables S2 and S3. Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/69_ironforge_control.yaml --jobs 2
+
+name: ironforge_control
+output_root: results/ironforge_control
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: 1_non_iid_moderate_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.5}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: ironforge_iftrain
+    overrides:
+      simulation: {protocol: ironforge}
+      local_training: {epochs: 1, lr: 0.05, momentum: 0.0, max_batches: 0, clip_grad_norm: 0.2}
+  - tag: ironforge_ourtrain
+    overrides:
+      simulation: {protocol: ironforge}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+  - tag: global_prox_iftrain
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+      local_training: {epochs: 1, lr: 0.05, momentum: 0.0, max_batches: 0, clip_grad_norm: 0.2}
+- name: 2_non_iid_severe_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: ironforge_iftrain
+    overrides:
+      simulation: {protocol: ironforge}
+      local_training: {epochs: 1, lr: 0.05, momentum: 0.0, max_batches: 0, clip_grad_norm: 0.2}
+  - tag: ironforge_ourtrain
+    overrides:
+      simulation: {protocol: ironforge}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+  - tag: global_prox_iftrain
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+      local_training: {epochs: 1, lr: 0.05, momentum: 0.0, max_batches: 0, clip_grad_norm: 0.2}
+- name: 3_non_iid_severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: ironforge_iftrain
+    overrides:
+      simulation: {protocol: ironforge}
+      local_training: {epochs: 1, lr: 0.05, momentum: 0.0, max_batches: 0, clip_grad_norm: 0.2}
+  - tag: ironforge_ourtrain
+    overrides:
+      simulation: {protocol: ironforge}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+  - tag: global_prox_iftrain
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+      local_training: {epochs: 1, lr: 0.05, momentum: 0.0, max_batches: 0, clip_grad_norm: 0.2}
+- name: 3w_non_iid_severe_with_poisoning_wide
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 9}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: ironforge_iftrain
+    overrides:
+      simulation: {protocol: ironforge}
+      local_training: {epochs: 1, lr: 0.05, momentum: 0.0, max_batches: 0, clip_grad_norm: 0.2}
+  - tag: ironforge_ourtrain
+    overrides:
+      simulation: {protocol: ironforge}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}, selection: {num_tips: 9}}
+  - tag: global_prox_iftrain
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}, selection: {num_tips: 9}}
+      local_training: {epochs: 1, lr: 0.05, momentum: 0.0, max_batches: 0, clip_grad_norm: 0.2}

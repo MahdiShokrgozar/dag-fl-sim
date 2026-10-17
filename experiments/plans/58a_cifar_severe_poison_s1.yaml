@@ -1,0 +1,50 @@
+# Plan 58a: CIFAR-10, severe skew with 20% poisoning, 6 aggregators, seeds 42/7/44.
+# Used in the paper: Table CIFAR-10. Platform of the reported runs: Kaggle.
+# Run: python run_experiments.py --plan experiments/plans/58a_cifar_severe_poison_s1.yaml --jobs 2
+
+name: cifar_severe_poison
+output_root: results/cifar_severe_poison
+seeds: [42, 7, 44]
+experiments:
+- name: S1_cifar_severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {name: cifar10, download: true, iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    model: {name: cnn_cifar10_gn, num_classes: 10}
+    local_training: {epochs: 2, optimizer: sgd, momentum: 0.9, lr: 0.01, clip_grad_norm: 2.0, max_batches: 160}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: robust
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_robust}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: rfa}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+  - tag: multi_krum
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: multi_krum}

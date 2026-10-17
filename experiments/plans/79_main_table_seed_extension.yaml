@@ -1,0 +1,111 @@
+# Plan 79: Five more seeds for the aggregators that keep learning in the other three scenarios of Table main.
+# Used in the paper: Sec. seeds and statistics; Suppl. Table S9. Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/79_main_table_seed_extension.yaml --jobs 2
+
+name: main_table_seed_extension
+output_root: results/main_table_seed_extension
+seeds: [11, 23, 57, 77, 101]
+experiments:
+- name: 1_non_iid_moderate_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.5}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+- name: 2_non_iid_severe_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+- name: 3w_non_iid_severe_with_poisoning_wide
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 9}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+          selection: {num_tips: 9}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection: {num_tips: 9}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: rfa}
+          selection: {num_tips: 9}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+          selection: {num_tips: 9}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+          selection: {num_tips: 9}

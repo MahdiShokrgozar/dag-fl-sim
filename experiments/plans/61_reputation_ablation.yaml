@@ -1,0 +1,50 @@
+# Plan 61: Reputation factor on/off in FARABI, with per-merge weight and distance diagnostics, 5 seeds.
+# Used in the paper: Sec. inside the merge (reputation factor, merge weights). Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/61_reputation_ablation.yaml --jobs 2
+
+name: reputation_ablation
+output_root: results/reputation_ablation
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: 2_non_iid_severe_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: global_prox_norep
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, reputation_weight: false}
+- name: 3_non_iid_severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: global_prox_norep
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, reputation_weight: false}

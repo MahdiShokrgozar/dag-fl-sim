@@ -1,0 +1,98 @@
+# Plan 65: Severe-skew scenario with the companion paper's exclusion layer on (distance gates, one strike): 7 aggregators under 20% poisoning and an honest control, 5 seeds.
+# Used in the paper: Sec. inside the merge (with the exclusion layer on). Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/65_full_ledger_t2rc.yaml --jobs 2
+
+name: full_ledger_t2rc
+output_root: results/full_ledger_t2rc
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: 3_non_iid_severe_with_poisoning_t2rc
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+    protocols:
+      farabi:
+        consensus:
+          strategy: farabi_ufs
+          anomaly_mode: gates
+          anomaly_gates: {cold_start_sanity_ceiling: true}
+          steal_detection_cid: false
+        selection: {mode: unified}
+        reputation: {reward_scale: 0.15, max_strikes: 1}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: global_prox_norep
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, reputation_weight: false}
+  - tag: prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+  - tag: robust
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_robust}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: rfa}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+- name: 2_non_iid_severe_honest_t2rc
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+    protocols:
+      farabi:
+        consensus:
+          strategy: farabi_ufs
+          anomaly_mode: gates
+          anomaly_gates: {cold_start_sanity_ceiling: true}
+          steal_detection_cid: false
+        selection: {mode: unified}
+        reputation: {reward_scale: 0.15, max_strikes: 1}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: global_prox_norep
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, reputation_weight: false}
+  - tag: robust
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_robust}

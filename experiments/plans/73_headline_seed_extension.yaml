@@ -1,0 +1,39 @@
+# Plan 73: Five more seeds for the aggregators that keep learning in the headline scenario of Table main (severe skew with 20% poisoning).
+# Used in the paper: Sec. seeds and statistics; Suppl. Table S9. Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/73_headline_seed_extension.yaml --jobs 2
+
+name: headline_seed_extension
+output_root: results/headline_seed_extension
+seeds: [11, 23, 57, 77, 101]
+experiments:
+- name: 3_non_iid_severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}

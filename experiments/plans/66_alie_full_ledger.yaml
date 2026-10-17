@@ -1,0 +1,97 @@
+# Plan 66: ALIE z=1 with the exclusion layer on. The 'legacy' arms use an accuracy detector whose evidence the voting nodes cannot recompute, so by design it excludes nobody; they are not used in the paper.
+# Used in the paper: Discussion (ALIE and the exclusion layer); only the distance-gates arm is used. Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/66_alie_full_ledger.yaml --jobs 2
+
+name: alie_full_ledger
+output_root: results/alie_full_ledger
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: alie_z1_t2rc_gates
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+      attacks:
+        poisoning: {mode: alie, alie_z: 1.0, evaluate_true_accuracy: true}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+    protocols:
+      farabi:
+        consensus:
+          strategy: farabi_ufs
+          anomaly_mode: gates
+          anomaly_gates: {cold_start_sanity_ceiling: true}
+          steal_detection_cid: false
+        selection: {mode: unified}
+        reputation: {reward_scale: 0.15, max_strikes: 1}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+- name: alie_z1_t2rc_legacy
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+      attacks:
+        poisoning: {mode: alie, alie_z: 1.0, evaluate_true_accuracy: true}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+    protocols:
+      farabi:
+        consensus:
+          strategy: farabi_ufs
+          anomaly_mode: legacy
+          anomaly_gates: {cold_start_sanity_ceiling: true}
+          steal_detection_cid: false
+        selection: {mode: unified}
+        reputation: {reward_scale: 0.15, max_strikes: 1}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+- name: honest_severe_t2rc_legacy
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+    protocols:
+      farabi:
+        consensus:
+          strategy: farabi_ufs
+          anomaly_mode: legacy
+          anomaly_gates: {cold_start_sanity_ceiling: true}
+          steal_detection_cid: false
+        selection: {mode: unified}
+        reputation: {reward_scale: 0.15, max_strikes: 1}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}

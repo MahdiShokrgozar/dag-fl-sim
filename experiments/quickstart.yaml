@@ -1,0 +1,49 @@
+# Quick start: FARABI (global_prox) and RFA for 60 simulated seconds, 10 nodes,
+# severe label skew (Dirichlet alpha 0.1), 2 of 10 nodes poisoning, one seed.
+# Derived from experiments/plans/60c_q1_final_severe_poison.yaml (600 s, 9 arms, 5 seeds).
+# Run: python run_experiments.py --plan experiments/quickstart.yaml
+
+name: quickstart
+output_root: results/quickstart
+seeds:
+- 42
+experiments:
+- name: 3_non_iid_severe_with_poisoning
+  base_config:
+    simulation:
+      backend: l2_scaling
+      protocol: farabi
+      max_time: 60.0
+    network:
+      num_nodes: 10
+      gossip_k: 6
+    dataset:
+      iid: false
+      scheme: dirichlet
+      dirichlet_alpha: 0.1
+    local_training:
+      max_batches: 20
+    participants:
+      total: 10
+      distribution:
+        honest: 0.8
+        poisoning: 0.2
+        flipping: 0.0
+        lazy: 0.0
+        stealing: 0.0
+    reporting:
+      interval: 30.0
+      active_metric_preset: paper_final
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation:
+            strategy: farabi_global_prox
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi:
+          aggregation:
+            strategy: rfa

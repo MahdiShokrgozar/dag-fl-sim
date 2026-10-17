@@ -1,0 +1,83 @@
+# configs/metric_presets.yml
+metric_presets:
+
+  # ۱. پروفایل مینیمال (برای دیباگ سریع کدها - سرعت اجرای بالا)
+  minimal_debug:
+    accuracy: true
+    performance: true
+
+  # ۲. پروفایل یادگیری فدرال (برای تحلیل همگرایی و واگرایی مدل‌ها)
+  fl_core:
+    accuracy: true
+    fl_aggregation_delay: true
+    fl_model_divergence: true
+    fl_gradient_variance: true
+    performance: true
+
+  # ۳. پروفایل تحلیل گراف و مقیاس‌پذیری (برای اثبات برتری DAG نسبت به Blockchain)
+  dag_core:
+    dag_growth: true
+    dag_structure: true
+    dag_throughput: true
+    tip_pressure: true
+    creator_distribution: true
+    network_traffic: true
+
+  # ۴. پروفایل لایه دوم و تسویه (برای تحلیل Sharding و ارتباط با قرارداد هوشمند)
+  l2_scaling:
+    l2_cluster_balance: true
+    l2_global: true
+    settlement_progress: true
+    network_traffic: true
+
+  # ۵. پروفایل امنیت و تحمل خطای بیزانس (برای تحلیل حملات و مکانیزم فضیلت)
+  security_core:
+    security: true
+    byzantine_influence: true
+    consensus_stability: true
+    consensus_global: true
+    accuracy: true
+
+  # ۶. پروفایل نهایی رساله (روشن کردن تمام سنسورها برای استخراج دیتای نهایی مقاله)
+  # هشدار: اجرای این پروفایل باعث تولید حجم زیادی دیتا و کند شدن شبیه‌ساز می‌شود.
+  thesis_full:
+    accuracy: true
+    performance: true
+    security: true
+    consensus_stability: true
+    consensus_global: true
+    creator_distribution: true
+    dag_growth: true
+    dag_structure: true
+    dag_throughput: true
+    fl_aggregation_delay: true
+    fl_model_divergence: true
+    fl_gradient_variance: true
+    l2_cluster_balance: true
+    l2_global: true
+    settlement_progress: true
+    tip_pressure: true
+    network_traffic: true
+    byzantine_influence: true
+    tip_selection: true
+    knowledge_transfer: true
+
+    # ۷. پروفایل استخراج نتایج مقاله (بهینه‌شده برای جلوگیری از پر شدن رم Kaggle)
+  paper_final:
+    accuracy: true          # برای رسم نمودار همگرایی و دقت
+    performance: true       # برای رسم نمودار طول صف، مصرف CPU و بسته‌های گم‌شده
+    security: true          # حیاتی: برای ثبت نوع گره (خرابکار/صادق/استرگلر) و وضعیت اخراج
+    network_traffic: true   # برای مقایسه سربار ارتباطی FARABI و IronForge
+    tip_selection: true     # برای تحلیل مکانیزم انتخاب تیپ
+    knowledge_transfer: true
+    # 2026-09-19: مقاله‌ی Q1 (Farabi-Prox) به model_norm_variance/pairwise_divergence_mean
+    # نیاز داره (شواهد مکانیستیک برای بخش Method). یک override در سطح پلن (۲۷) امتحان شد
+    # ولی کار نکرد: main.py دوباره load_config() صدا می‌زنه، و load_config همیشه
+    # metric_presets رو از همین فایل تازه می‌خونه و جایگزین می‌کنه -- یعنی override
+    # در سطح پلن/base_config هرگز نمی‌تونه دوام بیاره، فقط تغییر همین‌جا اثر داره.
+    # thesis-hub/docs/decisions.md همین تاریخ.
+    fl_model_divergence: true
+    # 2026-09-26: backdoor attack success rate; evaluates only when the
+    # population has backdoor attackers (thesis-hub/docs/decisions.md same date).
+    backdoor_asr: true
+    # بقیه متریک‌ها مثل تحلیل عمیق گراف یا واریانس گرادیان‌ها در اینجا خاموش هستند تا سرعت حفظ شود.

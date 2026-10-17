@@ -1,0 +1,44 @@
+# Plan 63a: FARABI and four baselines at 25 nodes (5 poisoners), severe skew, 5 seeds.
+# Used in the paper: Table scale (25 nodes). Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/63a_baselines_at_scale_25.yaml --jobs 2
+
+name: baselines_at_scale_25
+output_root: results/baselines_at_scale_25
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: n25_severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 25, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 25
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: rfa}
+  - tag: robust
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_robust}

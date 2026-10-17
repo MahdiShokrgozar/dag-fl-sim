@@ -1,0 +1,127 @@
+# Plan 67a: Sweep of mu (0.001 to 4) under Gaussian poisoning and (0.5, 2, 4) under ALIE z=1; tip-selection age factor on/off.
+# Used in the paper: Discussion (calibration of mu), Sec. age factor, Sec. attacks closer to the honest band. Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/67a_mu_sweep_lambda_select.yaml --jobs 2
+
+name: mu_sweep_lambda_select
+output_root: results/mu_sweep_lambda_select
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: mu_sweep
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: mu_0p001
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 0.001}
+  - tag: mu_0p01
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 0.01}
+  - tag: mu_0p1
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 0.1}
+  - tag: mu_0p25
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 0.25}
+  - tag: mu_0p5
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 0.5}
+  - tag: mu_1p0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 1.0}
+  - tag: mu_2p0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 2.0}
+  - tag: mu_4p0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 4.0}
+- name: mu_alie
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+      attacks:
+        poisoning: {mode: alie, alie_z: 1.0, evaluate_true_accuracy: true}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: mu_0p5
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 0.5}
+  - tag: mu_2p0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 2.0}
+  - tag: mu_4p0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, proximal_mu: 4.0}
+- name: lsel_severe_with_poisoning
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: lsel_0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection: {staleness: {enabled: true, lambda_select: 0.0, lambda_aggregate: 1.0}}
+- name: lsel_severe_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: lsel_0
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection: {staleness: {enabled: true, lambda_select: 0.0, lambda_aggregate: 1.0}}
+  - tag: lsel_1
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          selection: {staleness: {enabled: true, lambda_select: 1.0, lambda_aggregate: 1.0}}

@@ -1,0 +1,500 @@
+# ==============================================================================
+# DAG-based Federated Learning Simulator - Default Configuration
+# ==============================================================================
+
+loglevel: INFO
+
+# ------------------------------------------------------------------------------
+# 1. Simulation Core Settings
+# ------------------------------------------------------------------------------
+simulation:
+  backend: "decentralized"
+  protocol: "farabi"
+  seed: 42
+  device: "cuda"            # Options: "cuda", "cpu"
+  max_time: 200.0           # Total simulation duration in seconds
+  # `max_cached_models` (the old key here) is never read anywhere in src/ -
+  # ModelCacheManager's pool size comes from `gpu_cache_capacity`
+  # (src/simulators/engines/decentralized.py:100, default 5 when absent).
+  # Same class of bug as the 2026-09-09 min_history fix: the intended value
+  # silently never reached the code. Renamed to the key that's actually read.
+  gpu_cache_capacity: 10    # GPU Memory optimization (Object Pool Size)
+  # Caches each node's dataset tensors on GPU (FastTensorDataLoader,
+  # src/nodes/base_node.py:99) instead of re-transferring CPU->GPU every
+  # batch. FINAL DECISION (2026-09-10): stays false. Full investigation:
+  #   1. Enabling it collapsed mixed_unified from 86%+ to ~15% accuracy
+  #      (honest nodes stuck near random-guess).
+  #   2. DIAG-BATCH0/DIAG-LOSS logging showed the real cause: ~23% of
+  #      training calls diverged to astronomical loss (up to ~8e8) on
+  #      perfectly normal input data - a genuine numerical explosion,
+  #      contagious via aggregation (one node's diverged model poisons its
+  #      neighbors' next round), not a data/label bug in the cache path.
+  #   3. A divergence guard was added to local_trainer.py regardless (rejects
+  #      a non-finite incoming aggregate; discards any training step whose
+  #      loss goes non-finite/explodes) - this is a real, worthwhile
+  #      correctness fix on its own and stays enabled permanently.
+  #   4. With the guard active AND gpu_cache still on, a full 400s run showed
+  #      the guard works (no silent corruption, no crash) but the underlying
+  #      instability is too frequent to just discard around: mixed_unified
+  #      only partially recovered (57%/75%, still well below its normal
+  #      86%+/97%); mixed_dual was still effectively broken (561 divergence
+  #      events across the whole run, 16.8%/44.6% final accuracy).
+  # Conclusion: gpu_cache triggers a real, frequent numerical instability
+  # under this training setup that the guard can contain but not eliminate -
+  # not safe to enable for real experiments. The speedup it was meant to
+  # provide was also never observed to be meaningful (see the same date's
+  # entry on why: MNIST batches are tiny, real compute dominates wall time).
+  # See thesis-hub/docs/decisions.md, 2026-09-10, for the full trail.
+  gpu_cache: false
+  base_queue_capacity: 100
+  l2_management_interval: 50
+  profiling:
+    base_training_time_per_epoch: 1.25    # ثانیه (برای دستگاه مرجع C=1.0)
+    base_inference_time: 0.08             # ثانیه
+    pol_replay_factor: 0.3                # ضریب بار پردازشی IronForge
+
+# ------------------------------------------------------------------------------
+# 2. Protocol Specifics 
+# ------------------------------------------------------------------------------
+protocols:
+
+  # 1. FARABI Specific Settings (Proposed Architecture)
+  farabi:
+    block_version: "farabi_v4"
+    dag:
+      # The cumulative approval weight required to remove a tip from the eligible pool
+      tip_confidence_threshold: 1.0 
+      
+      # Optional: To prevent memory leaks in long runs (Garbage Collection)
+      # Tips older than this many epochs are pruned even if not fully validated
+      max_tip_age_epochs: 10
+    # ============================================================================
+    # Selection Configuration
+    # ============================================================================
+    selection:
+      # Epsilon-greedy (aggregation only)
+      eps_min: 0.1
+      eps_max: 0.9
+      decay_rate: 5.0
+      
+      # Selection parameters
+      num_tips: 3
+      analytical_delay: 0.005
+      # Weight-space distance in DATS: "all" (default) for every tip in view, O(L*P);
+      # "candidates" only for the candidate_pool_size tips drawn from the local view.
+      l2_distance_scope: "all"
+      
+      # Dynamic candidate pool
+      min_candidate_pool: 5
+      candidate_pool_ratio: 0.5       # 50% of available tips
+      
+      # Sybil resistance
+      min_virtue_threshold: 10.0      # Minimum virtue for candidate pool
+      
+      # Recency
+      gamma_recency: 0.05
+
+      # Staleness: older parents get less chance (DATS) and less weight
+      # (Farabi-Prox), age in rounds of the selecting node. Adopted as the
+      # FARABI default 2026-09-26 on plan 45a (lambda=1: +5 honest-node points
+      # on P13, same as the 3s tip cap, no honest slashed); no hard cap, it
+      # added nothing. thesis-hub/docs/decisions.md 2026-09-25/26.
+      staleness:
+        enabled: true
+        lambda_select: 1.0
+        lambda_aggregate: 1.0
+
+      # Emergency Historical Fallback trigger. "auto" is the shipped behaviour:
+      # fire only when the tip pool is empty. "never" and "always" exist to
+      # break the observational coupling found in plan-22 stage 1, where
+      # fallback count predicted honest accuracy across 8 cells at r=0.985
+      # while attack severity did not - but the fallback only fires when the
+      # pool starves, and the pool only starves under attack, so the two could
+      # not be separated without forcing them apart.
+      # See thesis-hub/docs/decisions.md (2026-09-06).
+      emergency_fallback: "auto"      # auto | never | always
+
+      # DUAL-PATH SELECTION. The protocol has two selection jobs with opposite
+      # requirements, and until 2026-09-06 one routine did both:
+      #   - the DAG PARENT set is consensus duty and must be chosen FAST; it is
+      #     the client-side scalability bottleneck the thesis is about
+      #   - the AGGREGATION input must be chosen for TRUST; it is the poisoning
+      #     surface, so it should come from FINALIZED blocks (already past
+      #     weight >= max(w_min, theta * mean_virtue)), not from raw tips
+      # select_tips_for_validation / select_tips_for_aggregation were both
+      # already written for this, but nothing ever passed `purpose`, so
+      # everything ran through the aggregation branch and aggregated from tips.
+      #
+      #   unified  - shipped behaviour, one selection for both (default, so this
+      #              branch changes nothing until a plan opts in)
+      #   dual     - option A: parents from tips, aggregation base from
+      #              finalized, carried in the block as `aggregation_refs`.
+      #              Costs extra fetches per validation.
+      #   anchored - option B: one list. num_anchors of the num_tips slots are
+      #              filled from the finalized set, so the per-block
+      #              fetch/verify budget is unchanged.
+      # See thesis-hub/docs/decisions.md (2026-09-06).
+      mode: "unified"                 # unified | dual | anchored
+      # Only governs `anchored`: how many of the num_tips parent slots become
+      # finalized anchors. Clamped to num_tips - 1, because approving tips is the
+      # consensus duty and a node that spent every slot on already-finalized
+      # blocks would approve none. `dual` ignores it and aggregates num_tips
+      # anchors - there the anchors REPLACE the parent set, and the crash check
+      # showed num_anchors=1 made it aggregate a single model, i.e. copy one
+      # block rather than average.
+      num_anchors: 1
+      anchor_pool_size: 10            # rank anchors within this many newest
+                                      # finalized blocks - too small and everyone
+                                      # anchors on the same vertex, too large and
+                                      # the base drifts stale
+
+    # ============================================================================
+    # Consensus Configuration
+    # ============================================================================
+    consensus:
+      # "baseline_por" (default, reproduces all pre-2026-09-05 runs) | "farabi_ufs"
+      # (T²RC/UFS path; required for signal_probe to record anything).
+      strategy: "baseline_por"
+      # T²RC parameters
+      tier3_threshold: 0.8
+      spot_check_prob: 0.05
+      max_strikes: 2
+      
+      # Trust Score filter (additional, not replacement)
+      use_trust_score_filter: false   # Enable after Cold Start
+      trust_threshold: 0.5
+      trust_weights:
+        utility: 0.4
+        entropy: 0.3
+        m3: 0.3
+      
+      # Anomaly detection: "gates" (two thresholds on the raw relative L2 distance,
+      # calibrated 2026-09-05 on 9,405 honest-only probe rows) or "legacy" (the old
+      # m1-sigmoid + m2 z-score rules, kept only for A/B benchmarking).
+      # Measured on held-out attack cells: lazy 100%, poisoning 100%, honest FP 0.00%
+      # OFFLINE. The live end-to-end number is different - see clamp_to_bootstrap.
+      # Stealing WAS handled by the deterministic plagiarism-hash gate; that gate is
+      # disabled by default as of 2026-09-12 (see enable_steal_detection below), so
+      # model stealing currently has NO live defense on this path.
+      # Backdoor is NOT separable on this signal - its distances fall entirely inside
+      # the honest band. See thesis-hub/docs/consensus-signal-study.md.
+      anomaly_mode: "gates"
+
+      # --- Model-stealing (plagiarism) gate -------------------------------------
+      # TEMPORARILY OFF (2026-09-12), to be repaired for the main papers/thesis --
+      # this is a deferral, not a removal. Measured precision was 0% (the test
+      # population contains no stealing nodes at all), and worse, the gate is
+      # backwards: it awards authorship of a weight-state to whoever publishes it
+      # first, and attackers that skip training publish 1.40x more blocks, so an
+      # honest node convicted of plagiarism was "copying" a malicious node 68-85%
+      # of the time vs a 33.3% base rate. Set true to restore the old behaviour.
+      # Full rationale + the agreed four-condition redesign: thesis-hub/docs/
+      # decisions.md, 2026-09-12.
+      enable_steal_detection: false
+      # Rebuilt stealing detection (2026-09-26, thesis-hub/docs/decisions.md;
+      # research-direction.md item 13): header-level CID match + the agreed
+      # four conditions (same CID, victim ready earlier, different author,
+      # not a republish of the accused's own declared aggregation base).
+      # Replaces the legacy hash registry above, which stays off.
+      steal_detection_cid: true
+      anomaly_gates:
+        # Bootstrap thresholds, used until min_history accepted blocks are seen.
+        tau_low: 0.00274      # honest 0.1th percentile
+        tau_high: 0.2613      # honest maximum x 1.15
+        adaptive: true        # then re-derive from this validator's own accepted blocks
+        history_size: 200
+        # Lowered 30 -> 10 on 2026-09-09. This YAML value is what actually
+        # reaches FarabiConsensus (gate_cfg.get("min_history", 10) in
+        # farabi_consensus.py never falls back to its own Python default
+        # while this key is present) - changing the .py default alone,
+        # which is what the first attempt at this fix did, was silently
+        # inert. See thesis-hub/docs/decisions.md, 2026-09-09.
+        min_history: 10
+        # W4 fix (2026-09-26): the proposer declares its Farabi-Prox
+        # coefficients and the lazy gate compares against exactly that
+        # combination instead of the parents' median, so a multi-parent lazy
+        # republish lands on distance 0 like a single-parent one. Local probe
+        # (P13 attacked, seed 43, 90s): multi-parent lazy distance 0.033-0.05
+        # -> 0, the never-caught lazy node slashed within 30s, no honest
+        # slashed. thesis-hub/docs/decisions.md 2026-09-26.
+        declared_aggregation_base: true
+        # Margins around the observed honest extremes. Deliberately NOT percentiles:
+        # over a 200-sample window a 0.1% quantile degenerates to the window minimum,
+        # which sits above the true honest floor and clipped 3.5-5.4% of honest blocks
+        # when replayed against real data. Margins gave 0.00% at the same detection.
+        low_margin: 0.5       # low  gate = min(history) * 0.5
+        high_margin: 1.15     # high gate = max(history) * 1.15
+        # The adaptive band may widen past the bootstrap values but never narrow
+        # inside them. The window holds ACCEPTED blocks only, so it is a truncated
+        # sample of the honest distribution: every rejection removes the current
+        # extreme, which tightens the gate, which causes the next rejection. In
+        # plan 22 group 1 (12 nodes, all honest) that walked tau_high in to 0.2048
+        # against a calibrated 0.2613 and slashed two honest nodes.
+        # Set false to reproduce the unclamped plan-22 behaviour for an A/B.
+        clamp_to_bootstrap: true
+        dag_anchored_window: true 
+      # Inherited-contamination exculpation (2026-09-16, one-hop version - see
+      # thesis-hub/docs/decisions.md and research-direction.md item 14). A
+      # "poison_distance" gate hit is NOT reported against the proposer if its
+      # raw_distance is already explained (within this tolerance) by its own
+      # direct aggregation_refs' recorded raw_distance - it inherited the
+      # contamination rather than generating it. The block is still rejected
+      # either way; only the accusation against the proposer is skipped.
+      # UNCALIBRATED - needs the same 3-seed sweep IronForge's
+      # slashing_threshold got (thesis-hub/docs/decisions.md, 2026-09-15)
+      # before this number is cited in the paper.
+      contamination_tolerance: 5.0
+
+      # Existing parameters (used by anomaly_mode: "legacy" only)
+      catastrophic_drop_threshold: -0.30
+      z_score_threshold: -3.0
+      novelty_steepness: 10.0
+      novelty_midpoint: 0.15
+      divergence_m2_threshold: 0.7
+      isolation_threshold: 0.01
+      frankenstein_tolerance: 1.0
+      signal_probe: false
+
+    # ============================================================================
+    # Aggregation Configuration
+    # ============================================================================
+  
+    aggregation:
+      # Layer-Wise Robust Aggregation
+      min_models_for_trimmed: 3      # N<5 → Median, N>=5 → TrimmedMean
+      trim_fraction: 0.4              # Fraction to trim from each side
+      feature_extractor_ratio: 0.90   # 90% of params = Feature Extractor
+      
+      # Outlier detection (existing)
+      outlier_factor: 10.0
+      outlier_floor: 0.5
+      outlier_abs: 500.0
+      weighting: "uniform"
+      proximal_mu: 0.5
+      strategy: "farabi_robust"
+
+    l2:
+      w_min: 2.0           # Minimum Virtue threshold for finality
+      theta: 0.67           # Safety margin (Majority threshold)
+      t_target: 60.0        # Target consensus time in seconds
+      # Finality rule: "mean_virtue" (default) = max(w_min, theta * mean virtue), one or
+      # two approvers at any size; "traffic" = design-document threshold
+      # max(w_min, theta * mean virtue * lambda_local * finality_target_time), a pool
+      # share of about theta * r * k * T (r blocks/node/s): keep T below 1/(theta*r*k).
+      finality_rule: "mean_virtue"
+      finality_target_time: 1.0
+      finality_rate_window: 30.0
+      # Pool assignment: "contiguous" (default, sorted-id slices) or "random"
+      # (sha256(seed, epoch, node_id) order; pool_epoch_seconds unset = one draw per run).
+      pool_assignment: "contiguous"
+      pool_epoch_seconds: null
+      min_settlement_batch: 3
+      # 💥 Scalable Staking Config: Define distribution percentages instead of per-node mapping
+      staking_pools:
+        Task_Vision: 1.0  # 40% of the network nodes will lock collateral for Vision Task
+        Task_NLP: 0.0
+        Task_Text: 0.00
+        
+    # ============================================================================
+    # Reputation Configuration
+    # ============================================================================
+    reputation:
+      initial_virtue: 50.0
+      # "constant" = every node enters with initial_virtue (all pre-2026-09-05 runs).
+      # "stake"    = node posts collateral to enter an L2 task and gets an entry
+      #              reputation from it. Stake is drawn log-uniformly in
+      #              [stake_min, stake_max] deterministically from (simulation.seed,
+      #              node_id), then mapped CONCAVELY (sqrt) into
+      #              [stake_virtue_floor, stake_virtue_ceiling].
+      # The ceiling is held strictly under the Tier-3 gate (tier3_threshold*100=80)
+      # on purpose: stake must not buy fast-path exemption, because the fast path
+      # only checks self-reported metadata. Fast-path access must be EARNED.
+      # "stake_sybil" = honest nodes as in "stake" (same draws, paired per seed);
+      #              attacker identities enter with sybil_stake (an attacker that
+      #              splits its capital over many identities), so entry reputation
+      #              is informative about honesty.
+      initial_virtue_mode: "constant"
+      sybil_stake: 1.0
+      stake_min: 1.0
+      stake_max: 100.0
+      stake_virtue_floor: 25.0
+      stake_virtue_ceiling: 75.0
+      max_virtue: 100.0
+      min_virtue: 0.0
+      reward_scale: 0.01
+      max_strikes: 2
+      # Per-reason override (2026-09-16, thesis-hub/docs/decisions.md same date).
+      # Empty by default - no behavior change unless an experiment sets it.
+      # "lazy_distance" has a documented, essentially irreducible ~0.06% honest
+      # false-positive floor (thesis-hub/docs/consensus-signal-study.md, sec 6.2)
+      # that `poison_distance` no longer shares after today's fixes - keep lazy
+      # detection at the old 2-strike bar even when `max_strikes` (the global
+      # fallback, used for poison_distance and everything else) is lowered.
+      max_strikes_by_reason: {}
+      virtue_penalty: 10.0
+      
+      # Sybil-resistant catch-up mechanism
+      catch_up_enabled: true
+      catch_up_multiplier_low: 1.5    # For virtue < 30
+      catch_up_multiplier_mid: 1.2    # For 30 <= virtue < 60
+      catch_up_max_budget_per_epoch: 100.0  # Max catch-up rewards per 100s epoch
+
+    
+  # 2. IronForge specific settings
+  ironforge:
+    selection:             
+      beta: 6                # تعداد مدل‌های کاندید برای بررسی
+      sigma: 5               # تعداد والدینی که نهایتا برای تجمیع انتخاب می‌شوند
+    consensus:
+      # ε_PoL: Frobenius norm threshold for PoL verification (Algorithm 3, line 11).
+      # ||W_replay - W_claimed||_F < eps_pol → learning is proved.
+      # Lower = stricter. Tune based on model size and dataset variance.
+      # Paper recommends dynamic adjustment to prevent spoofing (Section VI).
+      eps_pol: 5.0
+      # Fraction of one training epoch the verifier replays for PoL.
+      # 0.3 = replay 30% of max_batches. Balances accuracy vs. simulation speed.
+      pol_replay_time_factor: 0.3
+      min_learning_dist: 0.00001
+      acceptance_threshold: 0.4
+      # Algorithm 3 is a challenge-response game: most published nodes are
+      # never challenged and stand unverified. The paper gives no numeric
+      # rate (it falls out of each worker's own economic incentive, not
+      # modeled here); 0.5 is our own default, tunable per experiment.
+      # See thesis-hub/docs/decisions.md, 2026-09-15.
+      challenge_probability: 0.5
+
+    reputation:
+      initial_balance: 10.0
+      # Calibrated 2026-09-15 (thesis-hub/docs/decisions.md, same date) via a
+      # 3-seed threshold sweep on the ironforge-native scheme, 20%
+      # label-flipping attack, unlimited max_batches. The paper gives no
+      # numeric value for any of these three (Sec. IV describes them as a
+      # per-task publisher policy, Upsilon_m, not a protocol constant), so
+      # this is a legitimate calibration, not a deviation from a specified
+      # value. penalty:1.0/reward:0.5/threshold:0.0 (the pre-2026-09-15
+      # values) never crossed 0.0 within a 400s run regardless of signal
+      # quality - the threshold was simply unreachable at this scale.
+      # threshold:6.0 was the most seed-stable of {5.5, 6.0, 6.5, 7.0} tested
+      # (100%/100%/50% detection across seeds 42/43/44, 0% FPR in all three)
+      # but is NOT a perfect operating point - one of three seeds still
+      # missed one of two attackers. Report that honestly, do not round up
+      # to "100% detection".
+      penalty_amount: 2.0
+      reward_per_reference: 1.0
+      slashing_threshold: 6.0    # <--- اگر موجودی به این عدد یا کمتر برسد، مسدود شود
+      settlement_interval: 5
+
+  # 3. DB-FL specific settings
+  dbfl:
+    consensus:
+      kappa: 0.5               # پارامتر تنظیم‌کننده در الگوریتم RTSA (معادله 11)
+      num_tips: 2              # تعداد Tip هایی که باید انتخاب شوند
+    reputation:
+      enabled: true
+      alpha: 0.5               # ضریب واپاشی (Decay factor) برای شهرت تاریخی
+      initial_score: 50.0      # امتیاز شهرت اولیه نودها
+      epsilon: 1e-9            # مقدار بسیار کوچک برای جلوگیری از تقسیم بر صفر
+    dropout:
+      enabled: true
+      min_rate: 0.1
+      max_rate: 0.5           # نرخ پایه Dropout
+
+
+  # 4. FedAvg specific settings
+  fedavg:
+    consensus:
+      min_peers: 3
+    reputation:
+      enabled: false
+# ------------------------------------------------------------------------------
+# 3. Network Participants & Adversarial Settings
+# ------------------------------------------------------------------------------
+participants:
+  total: 10
+  # Sum of ratios should ideally be 1.0
+  distribution:
+    honest: 1.0        # 70% Honest Nodes
+    stealing: 0.0      # 20% Stealing Nodes (Model Copy Attack)
+    lazy: 0.0          # 10% Lazy Nodes (Random Noise Injection)
+
+  attacks:
+    # Shape of the forged per-class accuracy profile used by spoof_metadata().
+    #   uniform   = legacy. Flat ~claimed_accuracy across all classes. This maxes out
+    #               Shannon entropy (~ln(10)), which no honest Dirichlet Non-IID client
+    #               can reach, so it hands class_entropy a perfect AUROC=1.000. That
+    #               score measures a naive attacker, not a real defense.
+    #   dirichlet = adaptive adversary. Mimics an honest client's skewed profile at the
+    #               same non_iid_alpha, collapsing the entropy gap (AUROC ~0.79-0.86).
+    # Default stays "uniform" so runs made before 2026-09-05 stay comparable; the
+    # signal-probe plans opt into "dirichlet" explicitly.
+    spoof_profile: "uniform"
+    stealing:
+      min_victim_accuracy: 0.0   # حداقل دقت ادعایی قربانی برای دزدی
+      fake_compute_time: 0.05
+        
+
+
+# ------------------------------------------------------------------------------
+# 4. Network Conditions
+# ------------------------------------------------------------------------------
+network:
+  latency:
+    min: 0.1
+    max: 0.5
+    jitter: 0.005
+  gossip_k: 3              # Number of peers to gossip with
+  num_nodes: 10            # Should match participants.total
+
+# ------------------------------------------------------------------------------
+# 5. System Heterogeneity
+# ------------------------------------------------------------------------------
+straggler:
+  enabled: false
+  distribution: "pareto"
+  straggler_threshold: 2.0
+  params:
+    alpha: 3.0
+
+# ------------------------------------------------------------------------------
+# 6. Model & Dataset
+# ------------------------------------------------------------------------------
+model:
+  name: "cnn"
+  num_classes: 10
+
+dataset:
+  name: "mnist"
+  data_root: "./data"
+  download: true
+  iid: false
+  scheme: "dirichlet"
+  dirichlet_alpha: 0.5
+  batch_size: 32
+
+# ------------------------------------------------------------------------------
+# 7. Local Training
+# ------------------------------------------------------------------------------
+local_training:
+  epochs: 1
+  lr: 0.05
+  optimizer: "sgd"
+  momentum: 0.9
+  max_batches: 10
+  # Divergence-guard ceilings (src/nodes/local_trainer.py). Calibrated from
+  # one MNIST explosion incident (2026-09-16); confirmed too tight for
+  # CIFAR-10 (2026-09-17, thesis-hub/docs/decisions.md) - override per
+  # dataset/model rather than changing this MNIST-safe default.
+  init_weights_magnitude_ceiling: 50.0
+  layer_rms_ceiling: 5.0
+
+# ------------------------------------------------------------------------------
+# 8. Reporting & Storage
+# ------------------------------------------------------------------------------
+reporting:
+  interval: 5.0
+  save_dir: "./output"
+  active_metric_preset: "paper_final"
+
+storage:
+  type: "mock"
+  ipfs_mock_enabled: true

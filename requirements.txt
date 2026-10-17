@@ -1,0 +1,24 @@
+# Core Scientific Stack
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+networkx>=3.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Deep Learning (CPU version by default for Docker size)
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Configuration & Utilities
+pyyaml>=6.0
+tqdm>=4.65.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.0.0
+
+# Optional: IPFS Support
+# Note: ipfshttpclient is often unmaintained, pinning a working version or git
+#ipfshttpclient>=0.7.0

@@ -1,0 +1,96 @@
+# Plan 76b: As 76a under ALIE with z = 1.
+# Used in the paper: Sec. choice of anchor; Suppl. Table S7. Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/76b_entry_reputation.yaml --jobs 2
+
+name: entry_reputation_b
+output_root: results/entry_reputation_b
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: alie_z1
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+      attacks:
+        poisoning: {mode: alie, alie_z: 1.0, evaluate_true_accuracy: true}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: const_gp
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: const_gp_norep
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, reputation_weight: false}
+  - tag: const_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+  - tag: stake_gp
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          reputation: {initial_virtue_mode: stake}
+  - tag: stake_gp_norep
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, reputation_weight: false}
+          reputation: {initial_virtue_mode: stake}
+  - tag: stake_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+          reputation: {initial_virtue_mode: stake}
+  - tag: sybil_gp
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          reputation: {initial_virtue_mode: stake_sybil}
+  - tag: sybil_gp_norep
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox, reputation_weight: false}
+          reputation: {initial_virtue_mode: stake_sybil}
+  - tag: sybil_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+          reputation: {initial_virtue_mode: stake_sybil}
+  - tag: const_gp_r15
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          reputation: {reward_scale: 0.15}
+  - tag: stake_prox_r15
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+          reputation: {initial_virtue_mode: stake, reward_scale: 0.15}
+  - tag: sybil_gp_r15
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+          reputation: {initial_virtue_mode: stake_sybil, reward_scale: 0.15}
+  - tag: sybil_prox_r15
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+          reputation: {initial_virtue_mode: stake_sybil, reward_scale: 0.15}

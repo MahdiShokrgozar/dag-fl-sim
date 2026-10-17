@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "DAG-FL-Sim: An Asynchronous Discrete-Event Simulator for Decentralized Federated Learning over DAG Ledgers"
+version: "1.0.0"
+date-released: "2026-10-17"
+license: MIT
+authors:
+  - family-names: Shokrgozar
+    given-names: Mahdi
+    affiliation: University of Tehran
+  - family-names: Yazdani
+    given-names: Nasser
+    affiliation: University of Tehran
+preferred-citation:
+  type: article
+  title: 'FARABI: A Self-Anchored Aggregation Rule for Non-IID Federated Learning over
+    DAG-Structured Ledgers'
+  status: submitted
+  authors:
+  - family-names: Shokrgozar
+    given-names: Mahdi
+  - family-names: Yazdani
+    given-names: Nasser

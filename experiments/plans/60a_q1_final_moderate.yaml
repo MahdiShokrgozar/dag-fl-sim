@@ -1,0 +1,64 @@
+# Plan 60a: Final benchmark, moderate label skew (alpha 0.5), no attackers, 9 aggregators, 5 seeds.
+# Used in the paper: Table main (Moderate). Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/60a_q1_final_moderate.yaml --jobs 2
+
+name: q1_final_moderate
+output_root: results/q1_final_moderate
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: 1_non_iid_moderate_honest
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.5}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 1.0, poisoning: 0.0, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: robust
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_robust}
+  - tag: prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_prox}
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: farabi_global_prox}
+  - tag: multi_krum
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: multi_krum}
+  - tag: bulyan
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: bulyan}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: rfa}
+  - tag: balance
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: balance}
+  - tag: wfagg
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: wfagg}
+  - tag: lightyear
+    overrides:
+      protocols:
+        farabi:
+          aggregation: {strategy: lightyear}

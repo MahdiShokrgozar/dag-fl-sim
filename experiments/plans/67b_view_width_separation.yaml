@@ -1,0 +1,100 @@
+# Plan 67b: The four corners of gossip_k in {6, 9} x num_tips in {3, 9} for FARABI, RFA and the distance gates, severe skew with 20% poisoning, 5 seeds; corners (6,3) and (9,9) reproduce 60c and 60d exactly.
+# Used in the paper: Sec. main benchmark (wide view: number of peers vs number of parents). Platform of the reported runs: molab.
+# Run: python run_experiments.py --plan experiments/plans/67b_view_width_separation.yaml --jobs 2
+
+name: view_width_separation
+output_root: results/view_width_separation
+seeds: [42, 7, 44, 13, 99]
+experiments:
+- name: k6_t3
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: rfa}}
+  - tag: robust
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_robust}}
+- name: k9_t3
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 9}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: rfa}}
+  - tag: robust
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_robust}}
+- name: k6_t9
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 6}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}, selection: {num_tips: 9}}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: rfa}, selection: {num_tips: 9}}
+  - tag: robust
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_robust}, selection: {num_tips: 9}}
+- name: k9_t9
+  base_config:
+    simulation: {backend: l2_scaling, protocol: farabi, max_time: 600.0}
+    network: {num_nodes: 10, gossip_k: 9}
+    dataset: {iid: false, scheme: dirichlet, dirichlet_alpha: 0.1}
+    local_training: {max_batches: 20}
+    participants:
+      total: 10
+      distribution: {honest: 0.8, poisoning: 0.2, flipping: 0.0, lazy: 0.0, stealing: 0.0}
+    reporting: {interval: 30.0, active_metric_preset: paper_final}
+  variations:
+  - tag: global_prox
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_global_prox}, selection: {num_tips: 9}}
+  - tag: rfa
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: rfa}, selection: {num_tips: 9}}
+  - tag: robust
+    overrides:
+      protocols:
+        farabi: {aggregation: {strategy: farabi_robust}, selection: {num_tips: 9}}
