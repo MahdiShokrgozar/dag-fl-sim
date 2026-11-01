@@ -1,5 +1,6 @@
 # DAG-FL-Sim
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23642993.svg)](https://doi.org/10.5281/zenodo.23642993)
+
 **An Asynchronous Discrete-Event Simulator for Decentralized Federated Learning (DFL) over DAG Ledgers**
 
 DAG-FL-Sim is a high-fidelity **Discrete-Event Simulator (DES)** tailored for researching **Decentralized Federated Learning (DFL)** and **Blockchain-based FL**. Unlike traditional round-based simulators, DAG-FL-Sim models real-world conditions: continuous time, asynchronous communication, network jitter, and heterogeneous hardware capabilities.
