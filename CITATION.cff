@@ -1,8 +1,11 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "DAG-FL-Sim: An Asynchronous Discrete-Event Simulator for Decentralized Federated Learning over DAG Ledgers"
-version: "1.0.0"
-date-released: "2026-10-17"
+version: "1.0.1"
+date-released: "2026-10-26"
+doi: 10.5281/zenodo.23642993
+url: https://github.com/MahdiShokrgozar/dag-fl-sim
+repository-code: https://github.com/MahdiShokrgozar/dag-fl-sim
 license: MIT
 authors:
   - family-names: Shokrgozar

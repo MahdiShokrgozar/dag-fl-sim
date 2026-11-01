@@ -1,5 +1,5 @@
 # DAG-FL-Sim
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23642993.svg)](https://doi.org/10.5281/zenodo.23642993)
 **An Asynchronous Discrete-Event Simulator for Decentralized Federated Learning (DFL) over DAG Ledgers**
 
 DAG-FL-Sim is a high-fidelity **Discrete-Event Simulator (DES)** tailored for researching **Decentralized Federated Learning (DFL)** and **Blockchain-based FL**. Unlike traditional round-based simulators, DAG-FL-Sim models real-world conditions: continuous time, asynchronous communication, network jitter, and heterogeneous hardware capabilities.
@@ -12,7 +12,7 @@ At its core, it leverages a **Directed Acyclic Graph (DAG) ledger** for consensu
 - 🧱 **DAG Consensus & L2 Scaling:** Pluggable tip selection, block validation, and exclusion layers (including Layer-2 storage offloading integrations).
 - 🔌 **Highly Modular:** The aggregation rule, tip selection, reputation system, and attacker behaviors are pluggable strategies defined via YAML configurations. Change one variable and keep the rest strictly controlled.
 
-This is release **1.0.0**. It contains the code, the experiment plans and the result
+This is release **1.0.1**. It contains the code, the experiment plans and the result
 tables of the paper
 
 > M. Shokrgozar and N. Yazdani. FARABI: A Self-Anchored Aggregation Rule for Non-IID Federated Learning over DAG-Structured Ledgers. Manuscript under review.
